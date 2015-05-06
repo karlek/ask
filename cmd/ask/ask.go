@@ -1,3 +1,4 @@
+// Program ask converts images to ascii art in text format.
 package main
 
 import (
@@ -14,6 +15,7 @@ import (
 	"github.com/mewkiz/pkg/errutil"
 )
 
+// ascii opens an image file and prints an ascii art image.
 func ascii(filename string) (err error) {
 	reader, err := os.Open(filename)
 	if err != nil {
@@ -21,31 +23,37 @@ func ascii(filename string) (err error) {
 	}
 	defer reader.Close()
 
-	m, _, err := image.Decode(reader)
+	i, _, err := image.Decode(reader)
 	if err != nil {
 		return errutil.Err(err)
 	}
 
 	// Image width and height.
-	width, height := m.Bounds().Dx(), m.Bounds().Dy()
+	width, height := i.Bounds().Dx(), i.Bounds().Dy()
 
 	// Different change in x and y values depending on the aspect ratio.
 	dx, dy := aspectRatio(width, height)
 
+	// Print each line.
+	var line string
 	for y := 0; y < height; y += dy {
-		line := ""
+		line = ""
+		// Create a line. Convert the color level of the pixel into a ascii
+		// character.
 		for x := 0; x < width; x += dx {
-			line += level(m.At(x, y))
+			line += level(i.At(x, y))
 		}
 		fmt.Println(line)
 	}
 	return nil
 }
 
+// aspectRatio returns the approximative number of steps on the x- and y-axis.
 func aspectRatio(width, height int) (int, int) {
 	// Approximation of the relation between font width / font height is 2.
 	ratio := float64(width) / float64(height) / 2
 
+	// Number of pixels to ignore.
 	step := float64(stepFlag)
 	var dx, dy float64 = step, step
 
@@ -78,9 +86,11 @@ func level(c color.Color) string {
 	// From 0 to len(levels); What contrast is the current color?
 	l := int(r+g+b) / step
 
+	// Return the character corresponding to the approximative black and white value.
 	return string(levels[l])
 }
 
+// stepFlag is the amount of pixels skipped between each sample.
 var stepFlag int
 
 func init() {
@@ -99,6 +109,7 @@ func main() {
 	if flag.NArg() < 1 {
 		flag.Usage()
 	}
+	// For each file passed as arguments, convert the images to ascii art.
 	for _, path := range flag.Args() {
 		err := ascii(path)
 		if err != nil {
