@@ -5,13 +5,13 @@ import (
 	"flag"
 	"fmt"
 	"image"
-	"image/color"
 	_ "image/jpeg"
 	_ "image/png"
 	"log"
 	"math"
 	"os"
 
+	"github.com/lucasb-eyer/go-colorful"
 	"github.com/mewkiz/pkg/errutil"
 )
 
@@ -41,7 +41,7 @@ func ascii(filename string) (err error) {
 		// Create a line. Convert the color level of the pixel into a ascii
 		// character.
 		for x := 0; x < width; x += dx {
-			line += level(i.At(x, y))
+			line += level(i.At(x, y).RGBA())
 		}
 		fmt.Println(line)
 	}
@@ -68,38 +68,46 @@ func aspectRatio(width, height int) (int, int) {
 }
 
 // level takes a color and translates it into a contrast relative rune.
-func level(c color.Color) string {
+func level(r, g, b, _ uint32) string {
 	// Different values ranging from black to white.
 	var levels = []rune(" .,_-=:;+!|/$#@")
-
+	var ansiFmt = "\x1b[38;2;%d;%d;%dm%c\x1b[0m"
 	// Different values ranging from white to black (string reversed).
 	// var levels = []rune("@#$/|!+;:=-_,. ")
 
 	// 3 colors, 256 different values divided by the amount of different
 	// characters equals step size.
-	var step = 3 * 256 / (len(levels) - 1)
+	var step = float64(len(levels) - 1)
 
-	// Make colors 8 bit.
-	r, g, b, _ := c.RGBA()
-	r, g, b = r/256, g/256, b/256
+	// Make (0,1).
+	c := colorful.Color{float64(r>>8) / 256.0, float64(g>>8) / 256.0, float64(b>>8) / 256.0}
+	_, _, v := c.Hsv()
 
 	// From 0 to len(levels); What contrast is the current color?
-	l := int(r+g+b) / step
+	l := int(v * step)
 
+	ret := string(levels[l])
+	if color {
+		ret = fmt.Sprintf(ansiFmt, r>>8, g>>8, b>>8, levels[l])
+	}
 	// Return the character corresponding to the approximative black and white value.
-	return string(levels[l])
+	return ret
 }
 
 // stepFlag is the amount of pixels skipped between each sample.
-var stepFlag int
+var (
+	stepFlag int
+	color    bool
+)
 
 func init() {
 	flag.Usage = usage
 	flag.IntVar(&stepFlag, "s", 10, "skip this many pixels between each character")
+	flag.BoolVar(&color, "c", true, "colored ansi output")
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s [FILE],,,\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] [FILE],,,\n", os.Args[0])
 	flag.PrintDefaults()
 	os.Exit(1)
 }
