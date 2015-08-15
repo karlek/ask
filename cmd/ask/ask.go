@@ -15,6 +15,10 @@ import (
 	"github.com/mewkiz/pkg/errutil"
 )
 
+const (
+	ansiFmt = "\x1b[38;2;%d;%d;%dm%c\x1b[0m"
+)
+
 // ascii opens an image file and prints an ascii art image.
 func ascii(filename string) (err error) {
 	reader, err := os.Open(filename)
@@ -71,15 +75,12 @@ func aspectRatio(width, height int) (int, int) {
 func level(r, g, b, _ uint32) string {
 	// Different values ranging from black to white.
 	var levels = []rune(" .,_-=:;+!|/$#@")
-	var ansiFmt = "\x1b[38;2;%d;%d;%dm%c\x1b[0m"
-	// Different values ranging from white to black (string reversed).
-	// var levels = []rune("@#$/|!+;:=-_,. ")
 
 	// 3 colors, 256 different values divided by the amount of different
 	// characters equals step size.
 	var step = float64(len(levels) - 1)
 
-	// Make (0,1).
+	// Convert from color value uint32 to (0, 1).
 	c := colorful.Color{float64(r>>8) / 256.0, float64(g>>8) / 256.0, float64(b>>8) / 256.0}
 	_, _, v := c.Hsv()
 
