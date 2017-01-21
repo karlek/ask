@@ -17,6 +17,7 @@ import (
 
 const (
 	ansiFmt = "\x1b[38;2;%d;%d;%dm%c\x1b[0m"
+	rgbFmt  = `<span style="color: rgb(%d, %d, %d)">%c</span>`
 )
 
 // ascii opens an image file and prints an ascii art image.
@@ -38,6 +39,10 @@ func ascii(filename string) (err error) {
 	// Different change in x and y values depending on the aspect ratio.
 	dx, dy := aspectRatio(width, height)
 
+	if html {
+		fmt.Println(`<html><head><meta charset="utf-8"><style>body {background-color: black; font-size: `, 2*stepFlag, ` }</style></head><body><center><pre>`)
+	}
+
 	// Print each line.
 	var line string
 	for y := 0; y < height; y += dy {
@@ -48,6 +53,9 @@ func ascii(filename string) (err error) {
 			line += level(i.At(x, y).RGBA())
 		}
 		fmt.Println(line)
+	}
+	if html {
+		fmt.Println("</pre></center></body></html>")
 	}
 	return nil
 }
@@ -88,7 +96,13 @@ func level(r, g, b, _ uint32) string {
 	l := int(v * step)
 
 	ret := string(levels[l])
-	if color {
+	if html {
+		if r == 0 && g == 0 && b == 0 {
+			ret = " "
+		} else {
+			ret = fmt.Sprintf(rgbFmt, r>>8, g>>8, b>>8, levels[l])
+		}
+	} else if color {
 		ret = fmt.Sprintf(ansiFmt, r>>8, g>>8, b>>8, levels[l])
 	}
 	// Return the character corresponding to the approximative black and white value.
@@ -99,12 +113,14 @@ func level(r, g, b, _ uint32) string {
 var (
 	stepFlag int
 	color    bool
+	html     bool
 )
 
 func init() {
 	flag.Usage = usage
 	flag.IntVar(&stepFlag, "s", 10, "skip this many pixels between each character")
 	flag.BoolVar(&color, "c", true, "colored ansi output")
+	flag.BoolVar(&html, "html", true, "colored html output")
 }
 
 func usage() {
